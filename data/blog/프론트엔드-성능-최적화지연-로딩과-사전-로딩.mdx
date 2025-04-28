@@ -1,0 +1,292 @@
+---
+title: '[프론트엔드 성능 최적화]지연 로딩과 사전 로딩'
+date: '2024-10-22'
+tags: ['useEffect', '사전 로딩', '이미지', '지연 로딩', '컴포넌트']
+draft: false
+summary: '이전에 지연 로딩을 한번 다루기는 했지만.. 결국 이 책을 따라 배운 것을 순서대로 올리면 독자 입장에서 너무 중구난방하여 원하는 기법을 찾지 못하겠다는 생각이 들었습니다. 그래서 이번에는 책의 목차는 따라가되, 비슷한 키워드의 주제들이 나온다면 그것들을 모아서 다뤄볼'
+---
+
+이전에 지연 로딩을 한번 다루기는 했지만.. 결국 이 [책](https://product.kyobobook.co.kr/detail/S000200178292)을 따라 배운 것을 순서대로 올리면 독자 입장에서 너무 중구난방하여 원하는 기법을 찾지 못하겠다는 생각이 들었습니다.
+
+그래서 이번에는 책의 목차는 따라가되, 비슷한 키워드의 주제들이 나온다면 그것들을 모아서 다뤄볼 예정입니다. 그 방법이 더 독자에게 효과적이라 생각하기 때문에 바로 시작해보겠습니다.
+
+### (오른쪽 목차가 안보이는 사람들을 위한)목차
+
+1. 지연 로딩이란?
+2. 사전 로딩이란?
+3. 컴포넌트 지연 로딩
+4. 컴포넌트 사전 로딩
+5. 이미지 지연 로딩
+6. 이미지 사전 로딩
+7. 마무리
+
+## 지연 로딩이란?
+
+> **지연 로딩**은 리소스를 논 블로킹(중요하지 않음)으로 식별하여 필요할 때만 로드하는 전략입니다. 이는 [중요 렌더링 경로](https://developer.mozilla.org/ko/docs/Web/Performance/Critical_rendering_path)의 길이를 단축하는 방법으로, 페이지 로드 시간을 감소시킬 수 있습니다.
+> 출처: https://developer.mozilla.org/ko/docs/Web/Performance/Lazy_loading
+
+위의 정의처럼, 지연 로딩은 사용자가 당장 보지 않는 것에 관해 처음부터 로딩하는 것이 아닌 나중에 보여지게 될 경우 로딩을 하는 것입니다.
+
+그래서 react의 경우, 동적 import를 쉽게 구현해주는 기능을 제공하여 동적 import를 사용하는 해당 컴포넌트가 렌더링 될 시점부터 리소스를 다운받고 있습니다.
+
+## 사전 로딩이란?
+
+일단 사전 로딩에 관한 정확한 정의는 없지만, 일단 여기서는 다음과 같이 정의하겠습니다.
+
+> 지연 로딩 시 많은 용량의 파일을 다운로드 해야 할 경우, 이를 나눠서 어느정도 사전에 미리 다운로드 받는다.
+
+그래서 나중에 다루겠지만, 구체적으로 이야기하자면 특정 화면을 보여주는 순간이 아닌 `useEffect`를 사용해서 초기 렌더링이 끝난 후에 리소스를 다운받는 것을 볼 수 있습니다.
+
+## 컴포넌트 지연 로딩
+
+굳이 지금 로딩하지 않아도 되는 컴포넌트(예: 모달)를 나중에 로딩하고 싶다면 가장 좋은 방법은 동적 import를 사용하는 것입니다.
+
+### 동적 import
+
+컴포넌트를 초기에 다운받지 않고 특정 상호작용으로 나중에 지연 로딩하는데 가장 효과적인 방법으로는 동적 import를 사용하면 됩니다. 그래서 일반적인 바닐라 JS에서는 다음과 같이 작성하여 동적으로 파일을 가져옵니다.(프로미스 형식을 반환하기 때문에 보통 async/await 혹은 then 등을 사용합니다.)
+
+```jsx
+export function hi() {
+  alert(`안녕하세요.`)
+}
+
+export function bye() {
+  alert(`안녕히 가세요.`)
+}
+
+export default function () {
+  alert('export default한 모듈을 불러왔습니다!')
+}
+```
+
+```html
+<!doctype html>
+<script>
+  async function load() {
+    let say = await import('./say.js')
+    say.hi() // 안녕하세요.
+    say.bye() // 안녕히 가세요.
+    say.default() // export default한 모듈을 불러왔습니다!
+  }
+</script>
+<button onclick="load()">클릭해주세요,</button>
+```
+
+출처: https://ko.javascript.info/modules-dynamic-imports
+
+만약 react에서 컴포넌트 지연 로딩을 구현하고 싶다면 `Suspense`컴포넌트와 `lazy`함수를 사용하여 컴포넌트를 작성하면 됩니다.
+
+```jsx
+import React, { lazy, Suspense } from 'react'
+
+const LazyImgModal = lazy(() => import('./ImgModal'))
+
+function App() {
+	return(
+		{/*중략*/}
+		<Suspense fallback={null}>
+			{showModal ? (
+          <LazyImageModal
+            closeModal={() => {
+              setShowModal(false)
+            }}
+          />
+        ) : null}
+		</Suspense>
+
+	)
+
+}
+//이하 생략
+```
+
+## 컴포넌트 사전 로딩
+
+컴포넌트를 동적 로딩하고 싶지만, 그 컴포넌트의 크기가 너무 크다면 사전 로딩을 활용하는 방법도 있습니다.
+
+### onMouseEnter
+
+만약 특정 버튼을 클릭하여 컴포넌트를 로드하는 형식이라면 `onMouseEnter` 를 활용하여 버튼에 마우스를 올리기만 해도 모달 클릭 전에 미리 일정 부분 로딩하게 만들 수 있습니다.
+
+```jsx
+function Page() {
+  const [clickModal, setClickModal] = useState(false)
+
+  const handleMouseEnter = () => {
+    import('...url')
+  }
+
+  return (
+    <ButtonModal
+      onClick={() => {
+        setClickModal(true)
+      }}
+      onMouseEvent={handleMouseEnter}
+    />
+    //중략
+  )
+}
+```
+
+### useEffect
+
+만약 `onMouseEnter` 방식이 부담스럽다면 `useEffect`훅을 사용하여 최초 렌더링(마운트)이 끝날 경우 바로 로딩을 하는 방식도 있습니다.
+
+```jsx
+function Page() {
+  const [clickModal, setClickModal] = useState(false)
+  useEffect(() => {
+    const component = import('...url')
+  }, [])
+
+  return <div>//중략</div>
+}
+```
+
+## 이미지 지연 로딩
+
+위에서 본 컴포넌트와 마찬가지로 이미지도 지연 로딩이 가능한데요, 어떤 상황에 놓여져 있는 가에 따라 다음과 같은 방식을 선택할 수 있습니다.
+
+### Intersection Observer
+
+스크롤을 따라 사진들이 있는 위치에 있을 경우 해당 사진들을 로딩하고 싶다면 Intersection Observer를 사용하면 됩니다. 그래서 일단 [MDN](https://developer.mozilla.org/ko/docs/Web/API/Intersection_Observer_API)의 예시를 약간 변경하여 살펴보면 다음과 같습니다.
+
+```jsx
+const options = {
+  root: null,
+  rootMargin: '0px',
+  threshold: 1.0,
+}
+
+const intersectionObserver = new IntersectionObserver(function (entries) {
+  console.log('새 항목 불러옴', entries)
+}, options)
+// 주시 시작
+intersectionObserver.observe(document.querySelector('.scrollerFooter'))
+```
+
+여기 `options`를 살펴보면 다음과 같습니다.
+
+- root: 대상 객체의 가시성을 확인할 때 사용되는 뷰포트 요소(null의 경우 브라우저의 뷰포트로 설정)
+- rootMargin: root요소의 여백(root의 가시범위를 가상으로 확장 혹은 축소 가능)
+- threshold: 가시성 퍼센티지(정도에 따라 얼마나 보이면 콜백하는지 결정)
+
+그래서 이 `IntersectionObserver`를 활용하여 초반에 img태그에 src를 바로 넣는 것이 아닌 사용자 화면에 보일 시 src를 바로 넣는 것으로 스크롤 시 이미지가 계속 요청되는 것을 막을 수 있습니다.
+
+```jsx
+function Card(props) {
+	const imgRef = useRef(null)
+	useEffect(() => {
+		const options = {}
+
+		const callback = (entries, observer) => {
+			entries.forEach(entry => {
+				if(entry.isIntersecting) {
+				//화면에 보일시 할당
+					entry.target.src = entry.target.dataset.src
+					observer.unobserve(entry.target)
+				}
+			})
+		}
+		const observer = new IntersectionObserver(callback, options)
+
+		observer.observe(imgRef.current)
+
+		return () => observer.disconnect()
+	}, [])
+
+	return (
+		<img data-src={props.image} ref={imgRef}/>
+	//생략
+```
+
+### react-lazyload
+
+이번엔 react-lazyload라는 라이브러리를 이용하여 IntersectionObserver를 대체해보겠습니다.
+
+먼저, 설치는 다음과 같이 입력하면 되고,
+
+```
+$ npm install --save react-lazyload
+
+```
+
+코드 적용법은 간단합니다. 컴포넌트로 특정 요소들을 감싸면, 특정 요소들이 나타나기 전까지 로딩을 하지 않습니다.
+
+그리고 `offset`이라는 옵션을 통해 요소가 몇 픽셀 위에 있으면 미리 로딩하게 해줍니다.
+
+```jsx
+import LazyLoad from 'react-lazyload'
+
+function ItemPage() {
+	//1000px 위에서 로딩
+	return (
+		<LazyLoad offset={1000}>
+			<img .../>
+		</LazyLoad>
+	)
+}
+```
+
+## 이미지 사전 로딩
+
+이미지들을 보여주기 전에 이미지 하나만 먼저 로딩해서 보여줌으로써 사용자 경험(UX)를 어느정도 개선하고 Layout Shift(요소의 위치가 갑자기 변경되는 현상)도 개선할 수 있습니다.
+
+### Image 객체
+
+먼저 JS 자체의 Image 객체를 사용하는 것을 보겠습니다.
+
+```jsx
+useEffect(() => {
+  const img = new Image()
+  img.src = 'url...'
+}, [])
+```
+
+이렇게 작성한다면, 브라우저는 초반에 이미 해당 사진을 다운받았으며, 바로 이미지를 사용해야한다면 캐싱을 통해 빠르게 로딩됩니다.
+
+추가로, Image 객체 외에 많은 방법들이 있어 간략하게 살펴보겠습니다.
+
+1. CSS `background-image`
+
+```css
+.class {
+  background-image: url('...url');
+}
+```
+
+2. html `<link rel=”preload”>`
+
+```html
+<link rel="preload" href="...url" as="image" />
+```
+
+3. Next.js `next/image 컴포넌트` `priority 속성 true`
+
+```jsx
+import Image from 'next/image'
+
+export default function Page() {
+  return (
+    <Image
+      src="/profile.png"
+      width={500}
+      height={500}
+      alt="Picture of the author"
+      priority={true}
+    />
+  )
+}
+```
+
+## 마무리
+
+이렇게 해서 지연 로딩과 사전 로딩에 관해 작성하였습니다. 제 생각에는 지연 로딩으로 구현하되, 로딩하는 소요시간이 너무 길다면 사전 로딩까지 고려해봐도 좋을 것 같습니다.
+
+## 레퍼런스
+
+- 이 글의 기본 방향이 되어주는 `프론트엔드 성능 최적화 가이드` 책: https://product.kyobobook.co.kr/detail/S000200178292
+- 모르는 웹 관련 용어나 api 찾을 때 보는 MDN: https://developer.mozilla.org/ko/
+- 바닐라 JS와 관련한 글: https://ko.javascript.info/
+- React 공식 문서: https://react.dev/
+- Next.js 공식 문서: https://nextjs.org/

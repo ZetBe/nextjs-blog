@@ -1,0 +1,416 @@
+---
+title: '[프론트엔드 성능 최적화] 1장 블로그 최적화'
+
+date: '2024-09-29'
+tags: ['병목 현상', '블로그 최적화', '코드 분할', '텍스트 압축', '프론트엔드', '프론트엔드 최적화']
+draft: false
+summary: '안녕하세요! 이번에 데보션 OpenLab 2기 - 웹 프론트엔드 성능 최적화 스터디에 참여하고 있는 서희원입니다!며칠 전, 스터디에서 발표를 진행했는데요, 이번에 글로서 제가 어떤 내용들을 공유했고 경험했는지 작성하려 합니다! 병목 현상코드 분할텍스트 압축(윈도우 한정'
+---
+
+> 현재 데보션에도 같은 글이 있는데, 많은 관심 부탁드립니다. 한번 가보기보션에도 같은 글이 있는데, 많은 관심 부탁드립니다. [한번 가보기](https://devocean.sk.com/internal/board/viewArticle.do?id=166880)
+
+안녕하세요! 이번에 데보션 OpenLab 2기 - 웹 프론트엔드 성능 최적화 스터디에 참여하고 있는 서희원입니다!
+며칠 전, 스터디에서 발표를 진행했는데요, 이번에 글로서 제가 어떤 내용들을 공유했고 경험했는지 작성하려 합니다!
+
+### (오른쪽에 목차 안보이는 사람들을 위한)살펴볼 내용
+
+1. 병목 현상
+2. 코드 분할
+3. 텍스트 압축
+4. (윈도우 한정) node.js 버전 오류 해결
+
+# 먼저 살펴볼 것 - 크롬 개발자도구
+
+우리는 먼저 크롬의 개발자도구를 통해 성능 측정을 하고, 측정된 데이터를 통해 어떤 작업을 취해야 할지 결정합니다.
+
+그래서 일단 크롬 개발자도구의 여러 탭들 중 성능 탭을 소개하고 넘어갈까 합니다.
+
+## 크롬 개발자도구 - 성능
+
+`성능` 탭에서는 다음과 같은 화면을 구성하고 있습니다.
+![image.png](https://devocean.sk.com/editorImg/2024/9/28/cf4208d74dde9701094eeeafccf064952d4193026e405bf900840749821c2ce8)
+
+그리고 우리가 주로 볼 영역은 다음과 같습니다.
+
+1. CPU 차트
+2. 네트워크
+3. 소요시간(Timings)
+4. 기본(main)
+5. 요약
+
+각각 살펴보자면...
+
+### CPU 차트
+
+![image.png](https://devocean.sk.com/editorImg/2024/9/28/4e7c37ae6086d62fc5eaeaeb4c93c6c741137a3d015fa01c7b1d00ccb9859241)
+![image.png](https://devocean.sk.com/editorImg/2024/9/28/fd2c9cc1be1746867a1ca197e56fb541ec7153d9aa7736ea071d298369aa0331)
+
+CPU 차트에서는 CPU가 어떤 작업을 하고 얼마나 리소스를 차지하고 있었는지 확인 가능합니다.
+그리고 아래 사진을 참고해서 위의 사진을 보면 색깔 별로 어떤 작업이 나타나는지 확인 가능합니다.
+
+![image.png](https://devocean.sk.com/editorImg/2024/9/28/79206827bbd314abc3071c21f2746b3092dab4a5c094c10e357fe2eb77020aa9)
+
+### 네트워크
+
+![image.png](https://devocean.sk.com/editorImg/2024/9/28/88e891f7219daff195a2d0f67fcb34cd07085dc6014aa46f3fc1d932558c9160)
+
+네크워크에서는 브라우저가 어떤 파일들을 요청하고 다운로드하는데 걸리는 시간을 나타내고 있습니다. 참고로 다운로드한 네모 영역을 hover하면 아래와 같은 정보를 볼 수 있습니다.
+
+![image.png](https://devocean.sk.com/editorImg/2024/9/28/6fd7e593445904042c1c4906673f9f1d0063aba9bbb5a107875bd992f5925830)
+
+### 소요시간(Timings)
+
+![image.png](https://devocean.sk.com/editorImg/2024/9/28/9eedb1718791b75242d8224a6a85c1175a5d5a134e94415d53b47235ca5104fc)
+소요시간(Timings)에서는 렌더링 과정을 나타내고 있습니다. 하지만 이 탭은 여러 이슈로 인해 `개발자 모드(npm run start)+react버전 16이하`에서만 나타나므로 참고만 해주시면 됩니다.
+
+### 기본(main)
+
+![image.png](https://devocean.sk.com/editorImg/2024/9/28/4bf60cfe69f63aaa251f2b70d812d6257136e45228c60cb280a5d3e97bc4ee48)
+기본(main)에서는 브라우저에서 다운 받은 리소스들을 화면에 나타내기 위한 작업들을 시간 순으로 나타냅니다.
+그리고 여기서 나타내는 그래프는 Flame 그래프로, Tree모양의 복잡한 자료를 작고 읽기 쉬운 형식으로 표시하여 화면 공간을 효율적으로 사용합니다.
+
+![image.png](https://devocean.sk.com/editorImg/2024/9/28/235b0c02c68257102fb8bf48a4b778804c47270127758ff6805c25a781c7450a)
+
+### 요약
+
+![image.png](https://devocean.sk.com/editorImg/2024/9/28/9b40e4d2f3184689ba28718ce58a051fef50d19101575636d9501a107e4abb45)
+
+요약에서는 기본적으로 어떤 작업을 했는지 말 그대로 요약을 해줍니다.
+보통은 위 사진처럼 그래프로 나타나지만, 아래 사진처럼 특정 작업을 클릭하면 해당 작업의 요약을 볼 수 있습니다.
+
+![image.png](https://devocean.sk.com/editorImg/2024/9/28/b9aa4f3e85f698470ecdfe4e6c4d51b5c62c44ff9dae80556d1738f19fbf25a6)
+
+# 병목 코드 최적화
+
+여기서 보통 [cs분야의 병목 현상](https://www.intel.co.kr/content/www/kr/ko/gaming/resources/what-is-bottlenecking-my-pc.html)이란, CPU, 메모리 등 컴퓨터 부품 중 하나가 성능이 안좋아서 다 같이 안좋아지는 현상을 의미합니다.
+그리고 프론트엔드 최적화에서 병목 현상이란 특정 작업이 메인스레드를 너무 많은 시간 차지할 경우를 의미합니다.
+
+## 문제점 찾기
+
+그렇다면 어떻게 브라우저가 화면을 나타내는지 살펴봅시다.
+
+1. 처음에는 html파일을 다운받아 파싱을 진행하고 곧이어 초기 js파일들을 다운받습니다.
+   **![](https://lh7-rt.googleusercontent.com/slidesz/AGV_vUdAOk7SVf70ghSQqXPOMnDUjNClPcBrdXfUPtco9kg4THxeBg01vZc_veFixRxV5k3XZ_tkdNczLFnygFzTQhkJi1sdumi3X5AK3COKYnHRxtUvwBEg4QU9JR2RFG5Is9p6Ahec4knbQCMPAu8lno500SQYqFEt=s2048?key=cL_gFlaYXZDkUH2W43B8PQ)**
+
+2. js 파일들을 다 다운받으면 기본에서 js파일들을 가지고 작업합니다.
+   **![](https://lh7-rt.googleusercontent.com/slidesz/AGV_vUc_F0TW49YyTdUYj3FDq4VPsYk50yhrIsVAwc6CIRUOm0MLYvHJ4vADqubUh_fZHqliH1iAoRFg2_9gvxBZZb7XWrpyqc7po6tPxEQuTySr22aLETqeVOkaSVupSexeJJzuSVFCuZgADb-LKH1aJZESM_0Hk0A=s2048?key=cL_gFlaYXZDkUH2W43B8PQ)**
+
+3. js파일들의 작업이 끝나면 렌더링을 시작합니다.
+   **![](https://lh7-rt.googleusercontent.com/slidesz/AGV_vUd5SUaUHnPrxXubU9TnVcPd2CGqbAGR-nlW9rgHZzzhasX_mE63Ue5P0EjrKHbKn6eWBItUaaYFnn_cLbME2VuAycj5dSWBlNj3KCVPPnc5irAuxdm8aibnQv2WOQ2luT1PjhJA1_MT4rcb77J87cYysFo9q23v=s2048?key=cL_gFlaYXZDkUH2W43B8PQ)**
+
+4. 기본적인 렌더링이 끝나면 레이아웃 작업 후 api를 요청합니다.
+   **![](https://lh7-rt.googleusercontent.com/slidesz/AGV_vUfEpZuI2G0LJQEUFTHEVMe8nzcpznFwuQSZaKFT7H-Av7YpmSqIo1EYx4ciyL9ccZnThR5DylGj3oilflajU8tfSGj7LI4DYIA0Z11IpvIHXfiThekLu-PuHVBMB6o77UM6yr7PltXKjmrvFPdsSRaG_Chsr3A=s2048?key=cL_gFlaYXZDkUH2W43B8PQ)**
+
+5. api 데이터를 가져오면 이후 기본+렌더링작업들을 진행합니다.
+   **![](https://lh7-rt.googleusercontent.com/slidesz/AGV_vUcON2oX_q-R8lhWPHGfRI-Vm6wVUGgoe_zwk0ixdb0AsA8Kdm7cSnP_FTj-2EeXYZBX0zJLyl4LfIfsa7mOE3Apvd-QtCp6OJoITv6YbYdirQ0c7kG7GzVFTU067eZp4SbQN-rlb0pLIXwlvSn_CGh95M8dMJk=s2048?key=cL_gFlaYXZDkUH2W43B8PQ)**
+
+이 과정에서 보면 문제점이 하나 있는데, 그것은 위 사진에서 `ArticleList 컴포넌트`에 너무 많은 소요시간이 든다는 점입니다.
+그래서 이 작업이 기본에서 어떻게 작동하는지 살펴보니
+
+**![](https://lh7-rt.googleusercontent.com/slidesz/AGV_vUfi8FT4jImxjOpBphudaF0uW-OegUKw_GNhDawBxyCNIAZhOepeRr7pE8Wus0xfIoQ90gOx5nNlWWjxddn4HltAc-lz_dyWNLMR7zVceOtcKhe1PqHeHzPs5UkXpMcg2AKc5jcXxCqLkoIP8xb3_Rqqi25OVp4h=s2048?key=cL_gFlaYXZDkUH2W43B8PQ)**
+
+맨 아래 분홍색 영역까지 많은 소요시간이 걸린다는 것을 알 수 있습니다.
+(참고로 중간중간 끊어져 보이는 이유는 가비지컬렉터 때문입니다.)
+
+이 분홍색 영역의 이름을 찾아 소스코드를 살펴보면 **removeSpecialCharacter** 함수 때문에 오랜 시간이 걸린 것을 알 수 있습니다.
+
+```javascript
+function removeSpecialCharacter(str) {
+  const removeCharacters = ['#', '_', '*', '~', '&', ';', '!', '[', ']', '`', '>', '\n', '=', '-']
+  let _str = str
+  let i = 0,
+    j = 0
+
+  for (i = 0; i < removeCharacters.length; i++) {
+    j = 0
+    while (j < _str.length) {
+      if (_str[j] === removeCharacters[i]) {
+        _str = _str.substring(0, j).concat(_str.substring(j + 1))
+        continue
+      }
+      j++
+    }
+  }
+  return _str
+}
+```
+
+이 함수는 다음과 같은 코드를 가지는데 저는 2가지정도 문제점을 가지고 있다 생각합니다.
+각각 살펴보면 다음과 같습니다.
+
+1. **너무 비효율적입니다.**
+   위 코드는 블로그의 모든 글자를 탐색합니다. 그래서 최대 한 게시글 당 90000자까지 탐색합니다.
+2. **리액트에서 지향하는 방식인 선언형 프로그래밍 방식과 다릅니다.**
+   우선 제가 명령형과 선언형 프로그래밍에 대해 [찾아본 결과](https://www.ionos.com/digitalguide/websites/web-development/declarative-programming/) 명령형 프로그래밍은 `어떻게 작성하여 동작하냐`를 목적으로 둔다면, 선언형 프로그래밍은 `무엇을 위해 작성하냐`를 목적으로 둡니다.
+
+이를 바탕으로 봤을 때, 우리는 위 코드가 무엇을 위해 작성하는지 우선이 되어야하지만, 그런 모습은 바로 보이지 않습니다. 복잡해 보이죠.
+
+## 해결
+
+이 문제를 해결하기 위해서는 일단 str을 300자로 제한하고
+`replace`함수를 사용하여 특정 문자를 공백으로 바꾼다는 코드를 넣습니다.
+이렇게 작성하면 간결해 보이면서 최대 90000자를 탐색하는 함수가 300자까지만 탐색하므로 시간복잡도 측면에서 보면 `O(n) -> O(log(n)) (n=90000)`의 모습을 볼 수 있습니다.
+
+하지만 책에서는 다음과 같은 코드로 해결하라고 하지만 뭔가 이상한 코드가 나옵니다.
+
+```javascript
+
+function removeSpecialCharacter(str) {
+  let _str = str.substring(0, 300)
+  _str = str.replace(/[#_*~&;![\]`>\n=\->]/g, ‘’)
+  return _str
+}
+```
+
+바로 str 변수를 300자로 제한하여 `_str`이라는 변수를 만들어 놓고 `_str`에 `str.replace()`를 정의해버린다는 문제인데요.
+그래도 책에서 의도한 대로 어느정도 성능개선이 나타나지만 개인적으로 좀 아쉽다는 생각이 들었습니다.
+
+그래서 다음과 같이 코드를 개선하니 위의 코드보다 10%\~20% 정도 lighthouse의 지표들을 개선하였습니다.
+
+```javascript
+function removeSpecialCharacter(str) {
+  const _str = str.substring(0, 300).replace(/[#_*~&;![\]`>\n=\->]/g, '')
+  return _str
+}
+```
+
+그리고 맨 처음 있던 코드대비 lighthouse 점수는 30점 정도 오른 모습을 보이고
+ArticleList 컴포넌트의 소요 시간은 2260ms에서 47ms로 약 98%감소를 보였습니다.
+
+![image.png](https://devocean.sk.com/editorImg/2024/9/29/52ce25b48d6909cfedd8ee2fc7a97b4f6db6c39aebf17d4fc8a31b798591a1dd)![image.png](https://devocean.sk.com/editorImg/2024/9/29/80d06d450c67f41f7075f094f6e2ccedfa276b3807cfe573f85368881f3c1e48)
+
+# 코드 분할 & 지연 로딩
+
+`코드 분할`이란 말 그대로 코드를 분할하여 각 페이지 당 부담을 줄이는 것을 목표로 합니다. 그리고 `코드 분할`을 통해 나중에 모듈들이 실행되므로 이런 현상을 `지연 로딩`이라 합니다.
+
+## 번들 파일 분석
+
+아까는 api를 다운받은 이후의 상황을 봤다면 이번에는 맨 처음으로 가보겠습니다.
+
+**![](https://lh7-rt.googleusercontent.com/slidesz/AGV_vUeApfNEH8cUkzp3_D99pnn-VuArQMMN53ZWaFLHv7SN42D_PUAXldFKgfzj5XRGBKiLYkkEiJoPyo6rkvy9X6zep0rIfMOR-aWKmgJ2ZKMl0ktQ60llzycAKa_X_qvVEYtNYK_CIHaNolLg_CzCvJTQPcUsv5IY=s2048?key=cL_gFlaYXZDkUH2W43B8PQ)**
+
+맨 처음에 보면 굉장히 시간이 오래 걸리는 chunk 파일이 있습니다. 이 파일을 분석하기 위해 비교적 간편한 cra-bundle-analyzer를 사용하여 한번 확인해 보겠습니다.
+
+cra-bundle-analyzer는 다음과 같이 실행합니다.
+
+1. 터미널에 `npm install --save-dev cra-bundle-analyzer`를 입력하여 다운받습니다.
+2. 추가로 `npx cra-bundle-analyzer`를 입력하여 번들 분석을 실행합니다.
+3. 분석이 완료되면 html파일이 하나 생성되는데, 이 파일을 열어보면 어떻게 chunk 파일이 분리되어 있는지 확인 가능합니다.
+
+**![](https://lh7-rt.googleusercontent.com/slidesz/AGV_vUfAO-vCZn_ABwLjF7R7Nzwcab4spMHOxFeD_SoZ7LP_VMbDm-Geu-Ll6HYkqC2sq0N7NtrQJ6BqKSvu27dI2aJOPS44a_N_VF6llmrInXYMMx6L3NyBhyDWqNrp3FKY8XyZYMrnr7tQZGC7huylluPAkWjFFI2i=s2048?key=cL_gFlaYXZDkUH2W43B8PQ)**
+
+기존의 chunk파일들을 살펴보면 `2.chunk.js`에 많은 모듈이 있다는 것을 알 수 있습니다.
+그래서 각각 영역을 살펴보면 react-dom은 react에 필수적인 패키지라 넘어가고, `refractor`라는 영역이 보입니다.
+
+이 `refractor`를 `package.lock.json`에서 자세히 살펴보면
+**![](https://lh7-rt.googleusercontent.com/slidesz/AGV_vUdi0sAhIyfFuWtmzdrnc_TfOXmStBx-UumAuoqDw0maK2W9m-2myXRxCF0qkrfdf6zPmtlHJsXvB1BHJreQt6KsCnhkg_lNvuF_3N_H2wy61MYdQFx7e52yZ1fA5834tgFBjRmbx8HE6A8TjEMv2rCfyzKb0qAW=s2048?key=cL_gFlaYXZDkUH2W43B8PQ)**`react-syntax-highlighter`에서 `refractor`와 연관됨을 알 수 있습니다.
+
+참고로 해당 모듈은 블로그 사이트의 내부(`/view/[id]`)에 들어가서만 필수적으로 작동하는 모듈이기 때문에 메인 사이트(`/`)에는 필요없는 모듈입니다.
+
+그래서 이를 블로그 사이트의 내부에서만 모듈이 돌아가게 코드 분할이 필요합니다.
+
+## 해결
+
+코드 분할하기 가장 좋은 방법은 동적 import를 시행하면 됩니다.
+
+예를 들어,
+
+```javascript
+
+import { add } from ‘./math’
+console.log(‘1 + 4 =’, add(1, 4))
+```
+
+이런 코드를
+
+```javascript
+import(‘add’).then((module) => {
+const {add} = module
+console.log(‘1 + 4 =’, add(1, 4))
+})
+```
+
+이런 식으로 바꿀 수 있습니다.
+
+하지만 이런 방식으로 코드를 작성하면 promise를 반환하므로 꽤 복잡하게 코드를 작성할 수 있습니다.
+
+### Suspense와 Lazy
+
+여기서 react를 잘 아는 사람들은 눈치채셨겠지만, react에서는 `Suspense`와 `lazy`를 사용하여 동적 import를 쉽게 작성할 수 있습니다.
+
+### 여기서 Suspense란?
+
+Suspense는 보통 미디어 상의 긴장감 등을 나타낼때 사용되는 단어입니다.
+
+그리고 [공식문서](https://ko.react.dev/reference/react/Suspense)에는
+"`<Suspense>`는 자식 요소가 로드되기 전까지 화면에 대체 UI를 보여줍니다."
+라고 나옵니다.
+
+보통은 다음과 같이 작성합니다.
+
+```jsx
+// ...생략
+return (
+  <Suspense fallback={<Loading />}>
+    <conponent />
+  </Suspense>
+)
+```
+
+### 그리고 lazy란?
+
+lazy는 게으름을 뜻하는 단어이며,
+
+[공식 문서](https://ko.react.dev/reference/react/lazy)에서는
+"`lazy`는 로딩 중인 컴포넌트 코드가 처음으로 렌더링 될 때까지 연기할 수 있습니다."
+라고 나옵니다.
+
+보통 다음과 같이 작성합니다.
+
+```jsx
+import { lazy } from 'react'
+
+const MarkdownPreview = lazy(() => import('./MarkdownPreview.js'))
+```
+
+그렇기 때문에 `<Suspense>`컴포넌트 안에 `lazy`함수를 감싼 컴포넌트가 있다면 해당 컴포넌트는 렌더링되기 전까지 계속 지연시킵니다.
+
+<hr />
+
+아무튼 이렇게 작성한 코드는 해당 주소로 들어가야만 특정 모듈을 실행해 주므로 매우 효율적으로 chunk 파일들을 나눠서 다운받을 수 있습니다.
+
+```jsx
+
+import React, { Suspense, lazy } from 'react'
+import { Switch, Route } from 'react-router-dom'
+import './App.css'
+
+const ListPage = lazy(() => import('./pages/ListPage/index'))
+const ViewPage = lazy(() => import('./pages/ViewPage/index'))
+
+function App() {
+  return (
+    <div className="App">
+      <Suspense fallback={<div>로딩 중...</div>}>
+        <Switch>
+          <Route path="/" component={ListPage} exact />
+          <Route path="/view/:id" component={ViewPage} exact />
+        </Switch>
+      </Suspense>
+    </div>
+// … 이하 생략
+```
+
+**![](https://lh7-rt.googleusercontent.com/slidesz/AGV_vUe--_1WBbJe8MXMXwcuayqAR_R4DSd-cbhkivGPyg5-aAyKhayrlXfQxDODnzfCXHG9jRzSQG1Dbt_6o0OtxtJO7Lz7RUK4_kZI96ih-m8RQGwLuafWxeTll8tsAI3tfgX7aouoPiwpBl_p6u7eyjxhcbuiMoMJ=s2048?key=cL_gFlaYXZDkUH2W43B8PQ)**
+
+그리고 다시 번들을 분석해보면 위 사진처럼 나누어진 모습을 볼 수 있습니다.
+
+각각 어떤 chunk 파일인지 자세히 살펴보면 다음과 같습니다.
+
+- 0: ListPage에서 사용하는 외부 패키지를 모아둔 번들 파일
+- 3: ViewPage에서 사용하는 외부 패키지를 모아둔 번들 파일
+- 4: 리액트 공동 패키지를 모아둔 번들 파일
+- 5: ListPage컴포넌트 번들 파일
+- 6: ViewPage컴포넌트 번들 파일
+
+![image.png](https://devocean.sk.com/editorImg/2024/9/29/aca3833cabe3f59292838a70c28e158037c936958db46605405276e9cd1427b8)
+결론적으로 이야기하자면 총 시간은 약 45% 정도 감소하였고, 컨텐츠 다운로드 시간은 약 97% 정도 감소하였습니다. 추가로 lighthouse의 점수도 약간 오르고요.
+
+![image.png](https://devocean.sk.com/editorImg/2024/9/29/e7fbd6968bfdeafbd5a363596b7175a16225a91d176a4b48824d3fc6a9376951)
+
+# 텍스트 압축
+
+텍스트 압축이란 말 그대로 텍스트로 된 리소스들을 다운받는 시간을 줄이기 위한 방법으로, 빌드 시 브라우저에서 리소스들을 다운받을 때 생길 용량을 텍스트 압축으로 용량을 줄여서 어느정도 성능을 개선합니다.
+
+## 개발 환경과 배포 환경
+
+책에서는 development환경과 production환경이라 하지만, 저는 여기서 개발 환경과 배포 환경이라 하겠습니다.
+
+일단 각각 살펴봤을 때 두 상황에서 개발자도구의 네트워크 탭에 들어가 js파일만 분류해 보면 용량과 소요 시간이 다름을 알 수 있습니다. 배포 환경에서는 npm run build를 통해 chunk 파일의 용량을 줄이기 때문입니다. 그래서 실제로 lighthouse에서도 많은 점수 차이가 나구요.
+![image.png](https://devocean.sk.com/editorImg/2024/9/29/89f602aa4e1e22465ec36df3f2d0357cdfa193ab8f4763d00fbd3c7432025f6d)
+![image.png](https://devocean.sk.com/editorImg/2024/9/29/14241f3c1cdb28b87b3e4f3a9eb0031b76d1f41acf51cb284d8bc66ad43ac092)
+하지만 배포 환경에서 텍스트들을 압축하지 않았다는 문제가 발생해버립니다.
+**![](https://lh7-rt.googleusercontent.com/slidesz/AGV_vUdjdXlFXvpi3cLlDFVixSf_l54jMIFe35SnV_xcMSZpx0R7gDo_MdIbQ-56xg3vELk7AQR1t6GiI523jUBRhIxO7TQ97R3gGj2I0XQR3jMF6MS6ALIpbPSOqvbe81kavVvpn2Ig9m-C9gdaA9meBz8iClFVvFM=s2048?key=cL_gFlaYXZDkUH2W43B8PQ)**
+
+보통은 아래 사진처럼 `gzip`의 형태를 보여야하지만, 아래아래 사진의 다른 chunk 파일들은 gzip으로 텍스트 압축이 되어 있지 않습니다.
+
+![](https://lh7-rt.googleusercontent.com/slidesz/AGV_vUdZ81I5ZlzNZ8arpoyO8VoI76uqMTAeyYQXNZJdVyHFwGzRfP6MWz7cqOKTs5RR8Enxign4cbUu0TyfN0rf7JHZ2bJ_14sy_w4-ZpY2e0sc7tI5NyGUwcx0W-rXVuQdERITiZld_F7SUJcBD10Q8as0_VB8vNOH=s2048?key=cL_gFlaYXZDkUH2W43B8PQ)
+
+![](https://lh7-rt.googleusercontent.com/slidesz/AGV_vUfE6ixHc8c1ggqihxGadoBqYR5iigL-ofwQ6ysS9NmRLIcQFCx-CnhtF40hZjbasahkjmYhbD8krcaGOCr83p8qnBbKhAoGY-QIyuXCJ0CqPeHwtGEGh7OMmEwwgagRlnSwIZub4NdIdH3iEzK6zDveSaQLIDEb=s2048?key=cL_gFlaYXZDkUH2W43B8PQ)
+
+그렇다면 텍스트 압축의 의미로 왜 gzip인 걸까요?
+
+### gzip
+
+`gzip`이란 파일 압축에 사용되는 응용소프트웨어로, deflate알고리즘을 기반으로 작동합니다.
+`gzip`이외에 여러 파일 압축과 관련한 알고리즘들이 많긴 하지만, 여기까지만 하고 넘어가겠습니다.
+
+그래서 이를 해결하기 위해 여러분들이 사용하는 배포 환경이 다르지만, 책에서 하는 대로 npm run serve의 코드를 살펴보겠습니다.
+
+## 해결
+
+**![](https://lh7-rt.googleusercontent.com/slidesz/AGV_vUeRSx2XLOsE5PpBYncajVm_z7oS--WRRn2dAtiEMAAOU1wX_U41egEUooFyc2kq9Qu58QzNv6SStVz1HzZpNh8qcVcRAeqXHylbHcWKi3JapGg8eUBZke6xfTJyNIKXWYLWMkwZyhSYs7TMA7jGH2v_HBiq7r0=s2048?key=cL_gFlaYXZDkUH2W43B8PQ)**`npm run serve`의 코드를 살펴보면 `-u`, `-s`가 있는데, 각각 보면
+`-u`: 텍스트 압축을 하지 않겠다.
+`-s`: SPA 서비스를 위해 매칭되지 않는 주소는 모두 index.html로 보낸다.
+
+이렇게 되어 있기 때문에 아래 사진처럼 `-u`를 없애면 됩니다.
+**![](https://lh7-rt.googleusercontent.com/slidesz/AGV_vUfM2H3sxJqEgLgDOHQ9ogR_2yxFkvqbAmrZ5bW8xAkORLeJOzOBuQCA_lqSJEwvouN3CksEmSVOufeH-klGE94Qyv2XHsEDWDji37KzzfF3rJKBiEIZ3j2dWKJ0hpjWtEhc-BOW2Oj1xadfZ9VKY2pHW9QpeDx_=s2048?key=cL_gFlaYXZDkUH2W43B8PQ)**
+
+결론적으로 다시 lighthouse를 실행하면
+**![](https://lh7-rt.googleusercontent.com/slidesz/AGV_vUcrFdUAEaKOB7Z4ewmxpiyEnJu8DObFMdpSmLyHCEi0kh453moU-sRmyUg56INkhzX_XFMYPFVHRTKTKQaFGYeKl9zwqWOzmMsxkXOfwMOM0dFWhn_Fzz8eyYlSOimXWAoGXWkpUnbpzgBRy7UJ5H8NtAmMmmYh=s2048?key=cL_gFlaYXZDkUH2W43B8PQ)**
+
+`텍스트 압축`과 같은 사항은 없어집니다.
+
+# 부록: node.js 버전 에러
+
+에러명: Error: error:0308010C: digital envelope routines::unsupported
+
+만약 바로 책을 참고하여 깃허브에 있는 저장소를 로컬로 불러와 바로 `npm install` 하고 `npm run start`하면 위와 같은 에러가 나타날 수 있습니다.
+
+당황스럽겠지만, 이 에러는 node.js버전이 낮아서 발생한 에러로, node.js버전을 낮춰야 합니다.
+
+저의 해결 사례를 보자면..
+해당 깃허브 저장소가 약 4년 전에 만들어졌으므로 20년도에 만들어진 node.js버전을 찾아서 다운로드하자는 생각을했습니다. 그래서 4년전 node.js와 관련된 버전을 찾아보니 다음과 같은 사진을 볼 수 있었습니다.
+**![](https://lh7-rt.googleusercontent.com/slidesz/AGV_vUfpc42R2lPDM0VIExRGXAxY5Iyyh9iCIXrDM7AtNZ519pFsRRGGlb9c4etJDAkDsIA_piHwVcqlQ1UDz_EjapxI-KY2uOuF4AJp0BAC5p1kk6kMnLtQDqRgNWx-0FOBIrGyo1T8rPrYZcLV8YtylJuBHHn5AIs=s2048?key=cL_gFlaYXZDkUH2W43B8PQ)**
+
+그렇다면 바로 nvm을 설치하고 14버전의 node.js를 설치하여 적용하면 해결될 일이라 생각할 것입니다. 하지만 저는 현재 윈도우 운영체제를 사용하고 있으므로 nvm을 사용하지 못합니다. 그래서 gpt에게 물어봤습니다!
+
+## 해결
+
+이 에러들은 다음과 같은 방식으로 해결합니다.
+
+1. [nvm-windows](https://github.com/coreybutler/nvm-windows/releases)를 다운로드 받습니다.
+   ![image.png](https://devocean.sk.com/editorImg/2024/9/29/9657bd4c14f327ea88a160aa923142a6aaefffa6789617c16e2696e82ee29c41)
+   다운로드는 위의 동그라미 쳐진 부분을 클릭하여 받습니다.
+2. `nvm install`을 터미널 창에 입력합니다.
+3. `.vscode`폴더를 만들고 그 안에 settings.json파일을 만듭니다.
+   그리고 해당 파일에 다음과 같은 코드를 입력합니다.
+
+   ```json
+   {
+     "terminal.integrated.shellArgs.windows": ["-Command", "& { ./scripts/use-node-version.ps1 }"]
+   }
+   ```
+
+4. 추가로 `scripts` 폴더를 만들고, 그 안에 `use-node-version.ps1`이라는 PowerShell 스크립트를 생성합니다.
+   그리고 그 안에 다음과 같은 코드를 입력합니다.
+
+   ```bash
+   	# .nvmrc 파일을 읽고 nvm use 명령어 실행
+   $nvmrcPath = ".\.nvmrc"
+   if (Test-Path $nvmrcPath) {
+       $version = Get-Content $nvmrcPath
+       nvm use $version.Trim()
+   } else {
+       Write-Host ".nvmrc 파일을 찾을 수 없습니다."
+   }
+   ```
+
+5. 마지막으로 `.nvmrc` 파일을 생성하고 사용할 Node.js 버전을 입력합니다.
+   `echo "14.17.0" > .nvmrc`
+
+이제 정상적으로 작동한다면 매번 vscode로 해당 프로젝트 폴더를 방문할 때 마다 자동으로 node.js 버전을 낮춰주게 됩니다!
+
+# 마무리
+
+처음이라 조금 떨리고 미쳐 말하지 못한 내용이 많아 개인적으로 아쉬운 발표였다고 생각합니다. 그래서 이번에 여러가지 내용들을 보강하여 작성했는데, 읽어보시고 많은 도움 받았으면 좋겠습니다. 봐주셔서 감사합니다!

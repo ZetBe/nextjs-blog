@@ -1,0 +1,324 @@
+---
+title: '[bearl]최신 크롬 익스텐션 만들기(팝업 창) (manifest v3, 2024.03)'
+date: '2024-03-17'
+tags: ['Chrome Extension', 'bearl', 'br태그', '개행', '마크다운', '크롬 익스텐션', '크롬익스텐션']
+draft: false
+summary: 'bearl을 만들고 어느 날 스스로 사이트에 대한 고민을 하게 되었다. 과연 이 사이트를 사용하려고 직접 들어올 사람들이 있을까? (br태그를 붙이기 위해 사이트에 굳이 들어갈까?)실제로 사이트에 들어오는 사람들이 점점 줄어드는 모습을 볼 수 있었다. image사실 당'
+---
+
+들어가시면 볼 수 있습니다! https://chromewebstore.google.com/detail/bearl-extension/ncddgemmppmdgfkmjeneghkmjckhmakj?hl=ko&authuser=0
+
+<br />
+<br />
+<br />
+<br />
+
+먼저 `bearl`을 만들게 된 계기는 몇 년 전 부터 `Velog`와 `Github`같은 사이트에서 마크다운 형식의 문서를 작성하다보니 적절하게 개행을 하고 싶어도 엔터로 개행하는 것이 아닌 `<br>`태크로 추가해야 했다.
+그래서 엔터 키로 개행하면 그 만큼 br태그를 입력해주는 기능을 추가하자는 생각을 하게 되었고 그렇게 처음 [웹](https://bearl.vercel.app/) 버전을 만들게 되었다.
+
+<br />
+
+자세한 내용은 앞의 [글](https://velog.io/@zetbe/brbr%EC%A3%BC%EB%B3%80%EC%97%90-%EB%B6%88%ED%8E%B8%ED%95%9C-%EA%B2%83%EC%9D%80-%EB%AC%B4%EC%97%87%EC%9D%BC%EA%B9%8C-br%ED%83%9C%EA%B7%B8%EB%A5%BC-%EC%9E%90%EB%8F%99-%EC%B6%94%EA%B0%80%ED%95%98%EC%9E%90)을 참고하면 좋을 것 같다.
+
+<br />
+
+`bearl`을 만들고 어느 날 스스로 [사이트](https://bearl.vercel.app/)에 대한 고민을 하게 되었다.
+
+> 과연 이 사이트를 사용하려고 직접 들어올 사람들이 있을까? (br태그를 붙이기 위해 사이트에 굳이 들어갈까?)
+
+실제로 사이트에 들어오는 사람들이 점점 줄어드는 모습을 볼 수 있었다.
+
+<br />
+
+![vercel.png](https://github.com/ZetBe/bearl/assets/90635746/28ab3931-0711-41f8-a4ce-296aecd30b9f)
+
+<br />
+
+사실 당장 필자만 하더라도 많아야 일주일에 한번 글을 작성하니 그럴 수 있겠다는 생각을 했다. 이런 귀찮음을 해결하기 위해 크롬 익스텐션을 만들면 사용자 입장에서 고정적으로 간편하게 사용할 수 있을 것 같아서 이번엔 크롬 익스텐션을 만들어 보기로 한다.~~(삽질 과정도 있다.)~~
+
+<br />
+
+<br />
+<br />
+<br />
+
+## 시작
+
+크롬 익스텐션을 만들기 위한 기본적인 단계로 다음과 같다.
+
+1. 폴더를 하나 만든다.
+
+   <img
+     width="406"
+     alt="folder.png"
+     src="https://github.com/ZetBe/bearl/assets/90635746/0ad863ab-d536-458e-a4e2-29bfdcd6324f"
+   />
+
+2. vscode기준으로 file → open folder로 해당 폴더를 연결한다.
+
+   <img
+     width="674"
+     alt="vscode.png"
+     src="https://github.com/ZetBe/bearl/assets/90635746/b0bbd118-6360-4cdb-90eb-79214924dd95"
+   />
+
+3. 해당 폴더에 manifest.json파일을 하나 생성한다.
+4. manifest.json파일에 다음과 같이 일단 작성한다.
+
+<br />
+
+```jsx
+{
+  "manifest_version": 3,
+  "name": "원하는 제목",
+  "description": "그냥 아무말",
+  "version": "1.0",
+}
+```
+
+<br />
+
+5. 크롬에 chrome://extensions/를 접속하여 왼쪽 상단에 개발자 모드를 킨다.
+
+![chromeEx.png](https://github.com/ZetBe/bearl/assets/90635746/7e3bd4db-12f6-4df2-9ac9-adbcd6c1ea5e)
+
+6. `압축해제된 확장 프로그램을 로드합니다.` 를 눌러 1번에서 만든 폴더를 로드한다.
+
+7. 이제 아래에 내가 로드했던 확장 프로그램을 확인할 수 있다.
+8. 확인 되었다면 크롬 오른쪽 상단에 퍼즐모양 버튼을 눌러 아까 로드한 확장 프로그램을 고정한다.
+
+![nav.png](https://github.com/ZetBe/bearl/assets/90635746/138fa6cf-c79b-4a1e-a55f-d5649d294f42)
+
+<br />
+
+9. 코드를 작성하다가 현재 프로그램이 어떻게 작동하는 지 알고 싶다면 5번의 사이트에서 `업데이트`를 눌러서 확인하면 된다.
+
+<br />
+
+여기까지 하면 일단 기본적인 세팅은 완료되었다. 앞으로 전체적인 구조를 확인하고 싶다면 `manifest.json`파일을 보면 된다.
+
+![](https://velog.velcdn.com/images/zetbe/post/0f102a32-7d3d-4a22-9228-3acac5adf8fb/image.png)
+
+### 오류 찾기
+
+만약 개발 중 IDE로 잡을 수 없는 오류가 생긴다면 `업데이트`버튼을 누름에도 변화가 없거나 빈 화면이 나올 수 있다.
+
+![](https://velog.velcdn.com/images/zetbe/post/98936c4f-cb80-46e6-a2d4-2d39bc42e72f/image.png)
+그런 경우, 당황하지 말고 위의 사진처럼 자신이 추가한 확장 프로그램을 확인해보면 된다. 그리하여 아래 사진을 보고 특정 오류를 고친다면 `모두 삭제`버튼을 누르면 된다.(`모두 삭제`를 누르지 않으면 오류들이 쌓인다.)
+![](https://velog.velcdn.com/images/zetbe/post/300058b3-8d81-4c3a-8086-31f1c02dddea/image.png)
+
+<br />
+<br />
+
+## 전체적인 구조
+
+아래 코드는 필자의 `manifest.json`이다.
+
+```jsx
+{
+  "manifest_version": 3,
+  "name": "bearl-extension",
+  "description": "크롬 익스텐션으로 br태그를 편하게 추가해요",
+  "version": "1.0",
+  "action": {
+    "default_icon": {
+      "16": "icon/bearl-logo.png",
+      "32": "icon/bearl-logo.png",
+      "48": "icon/bearl-logo.png",
+      "128": "icon/bearl-logo.png"
+    },
+    "default_popup": "popup.html"
+  }
+}
+```
+
+<br />
+
+위의 `manifest.json`과 다른 점은 icon과 popup말고는 거의 없다.
+
+그리고 사실 위에서 언급한 필자의 사이트에서 실제로 돌아가는 데 막 기술적으로 거창한 부분은 없기 때문에 일단 이정도로 설정하여 사용 중이다.
+
+<br />
+
+<br />
+
+### 아이콘 적용하기
+
+위의 `manifest.json`에서 아이콘을 16, 32, 48, 128에 적용하는 모습을 볼 수 있다. 여기서 이 숫자들은 크기(픽셀)를 의미하는데, 과연 왜 이렇게 설정했을까?
+
+<br />
+
+이렇게 설정한 이유는 크롬에서 아이콘을 일정 크기로 설정하여 해당 크기의 아이콘을 여기저기 사용하기 때문이다. 그렇기 때문에 일단 같은 아이콘이라도 이렇게 설정하는 것이 맞다고 보고 적용하였다.
+
+<br />
+
+<br />
+
+### 팝업 페이지 만들기
+
+그리고 `default_popup` 을 통해 팝업창을 만들 수 있다. 해당 html파일에서 id를 사용하여 js파일과 css파일에 적용할 수 있다.
+
+<br />
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="./popup.css" />
+  </head>
+  <body>
+    <h1>bearl-extension</h1>
+    <p>사이트에서 바로 해결!</p>
+    <textarea id="input"></textarea>
+    <textarea id="output" readonly style="outline: none"></textarea>
+    <button id="copy">copy!</button>
+    <script src="./popup.js" type="module"></script>
+  </body>
+</html>
+```
+
+<br />
+
+여기서 주의할 점은 팝업창이 `width: 800px, height: 600px`로 제한되어 있어서 이 픽셀을 넘어가면 스크롤이 발생한다. 그러므로 사용자 관점에서 불편함을 일으키지 않기 위해 해당 공간만큼 사용하면 된다.
+
+<br />
+
+팝업 창은 전에 만들었던 사이트의 코드를 가져와서 만들었기 때문에 금방 만들었다. 여기서 솔직히 리액트로 개발할까 생각은 했지만, 너무 작은 규모라 굳이 적용할 필요를 느끼지 못해 리액트로 적용은 하지 않았다.
+
+<br />
+
+<br />
+<br />
+<br />
+
+## 크롬에다가 배포하기
+
+<br />
+
+이렇게 익스텐션을 만들었다면 배포하면 된다. 과연 배포는 어떻게 할까?
+
+<br />
+
+1. 크롬 익스텐션을 만들었던 폴더를 .zip형식으로 압축한다.
+
+2. [크롬 웹 스토어](https://chromewebstore.google.com/)에 들어간다.
+
+<br />
+
+![chromeNav.png](https://github.com/ZetBe/bearl/assets/90635746/07ed43cf-4522-46d9-92b1-616b349c80c3)
+
+<br />
+
+3. 오른쪽 위에 점 3개를 눌러서 `개발자 대시보드`에 들어간다.
+
+4. 처음에 5달러를 내야하는데, `자신의 카드 정보와 국가: 미국, 우편번호: 34139`로 입력하면 넘어가진다.
+5. 새 항목에 들어가 아까 압축한 .zip파일을 드래그 해서 넣는다.
+6. 웹 스토어에 올리기 위한 나머지 과정은 크롬에서 정한 가이드에 따라 필요 사항 작성 후 검토를 받는다.
+
+<br />
+
+참고로 비영리 목적에 아무런 데이터도 수집하지 않는다고 하면 쉽게 검토를 받아볼 수 있다. 그리고 데이터를 수집하겠다고 하면 개인정보처리방침이 있는 url을 입력해야 한다.
+
+<br />
+
+<br />
+<br />
+<br />
+
+## +content_scripts 삽질기
+
+만약 사이트의 요소에 접근하고 싶다면 manifest.json을 다음과 같이 설정해 보면 된다.
+
+<br />
+
+```json
+{
+  "manifest_version": 3,
+  "name": "bearl-extension",
+  "description": "크롬 익스텐션으로 br태그를 편하게 추가해요",
+  "version": "1.0",
+  "content_scripts": [
+    {
+      "matches": ["<all_url>"],
+      "js": ["content.js"]
+    }
+  ]
+}
+```
+
+<br />
+
+(여기서 matches부분은 특정 url로 설정해도 된다.)
+
+<br />
+
+그러면 이제 content.js를 사용하여 해당 사이트의 요소에 접근하고 그 요소를 바꿔볼 수 있다. 그렇게 해서 바꿔보고 싶은 사이트는 github의 Edit창이었다.
+
+<br />
+
+![githubEditHtmlChrome.png](https://github.com/ZetBe/bearl/assets/90635746/75da7a88-2874-4257-a5b2-2232b4cfa5dc)
+
+<br />
+
+원래 목적은 개행이 됨을 인식하면 한번 그 사이트의 요소들을 훑어 보면서 br태그를 추가하게끔 만들어 보고 싶었다.
+
+<br />
+
+그러나 해당 Edit은 전부 textarea태그가 아닌 div태그로 되어 있었고, 그래도 class이름으로 요소들을 찾아서 저장하고자 하였으나 저장이 안되는 일이 발생하였다. 이 문제는 개발자 커뮤니티에 한번 질문 하여 해답을 구해봐야겠다.
+
+<br />
+
+<br />
+<br />
+<br />
+
+## 마무리
+
+<br />
+
+이렇게 해서 처음 시작 부터 개발, 삽질, 배포까지 살펴봤다.
+
+사실 크롬 익스텐션 자체가 낮설기도 하고 공식문서에 개념들이 흩어져 있어 배우는 데 시간이 좀 걸리긴 했다. 생각보다 많은 사람들이 크롬 익스텐션을 리액트로 적용하여 개발했다는 글을 많이 봤는데, 솔직히 단순한 기능만 구현할 목적이라면 그냥 바닐라 자바스크립트로 개발하는 것이 훨씬 낫다고 생각한다.
+
+> 이 글을 쓰고 있는 3월 17일 현재 bearl-extension은 크롬 웹 스토어에 검토 중이므로 나중에 나오게 된다면 많은 관심 부탁드립니다!
+
+> 추가) 3월 17일 웹 스토어에 공개 되었습니다!
+> 보러 가기: https://chromewebstore.google.com/detail/bearl-extension/ncddgemmppmdgfkmjeneghkmjckhmakj?hl=ko&authuser=0
+
+<br />
+
+<br />
+
+### 배포한 크롬 익스텐션 시연 영상
+
+![](https://velog.velcdn.com/images/zetbe/post/5845c3c0-d779-4005-a3c1-c39a96ae63f0/image.gif)
+
+이 익스텐션은 다음과 같은 기대효과를 가지고 있다.
+
+- 빠른 마크다운, html문서 작성
+- br태그 추가를 적게하며 궁극적으로 손가락과 손목 관절 보호
+
+<br />
+
+이 익스텐션은 다음과 같은 사람들에게 추천한다.
+
+- 마크다운 문서에 `br태그`를 추가하고 싶은 사람
+- html 문서에 `br태그`를 추가하고 싶은 사람
+
+<br />
+<br />
+<br />
+
+## 레퍼런스
+
+<br />
+
+- 크롬 익스텐션 공식문서: https://developer.chrome.com/docs/extensions/get-started?hl=ko
+- Zum에서 크롬 익스텐션 만든 후기: https://zuminternet.github.io/Zum-Chrome-Extension/
+- 구글 결제 해결 방법: [https://velog.io/@ino5/Chrome-웹-스토어-개발자-등록-수수료-결제-설정-오류국가-우편번호](https://velog.io/@ino5/Chrome-%EC%9B%B9-%EC%8A%A4%ED%86%A0%EC%96%B4-%EA%B0%9C%EB%B0%9C%EC%9E%90-%EB%93%B1%EB%A1%9D-%EC%88%98%EC%88%98%EB%A3%8C-%EA%B2%B0%EC%A0%9C-%EC%84%A4%EC%A0%95-%EC%98%A4%EB%A5%98%EA%B5%AD%EA%B0%80-%EC%9A%B0%ED%8E%B8%EB%B2%88%ED%98%B8)
+- 유튜브 코딩애플 크롬 익스텐션: https://www.youtube.com/watch?v=pIQmxUk_FdI
+- 팝업창 관련 글: https://code-reading.tistory.com/133
+- 크롬 익스텐션 아이콘 관련 글: [https://okayoon.tistory.com/entry/크롬-확장-프로그램-제작-셋팅-방법](https://okayoon.tistory.com/entry/%ED%81%AC%EB%A1%AC-%ED%99%95%EC%9E%A5-%ED%94%84%EB%A1%9C%EA%B7%B8%EB%9E%A8-%EC%A0%9C%EC%9E%91-%EC%85%8B%ED%8C%85-%EB%B0%A9%EB%B2%95)
