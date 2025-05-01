@@ -1,4 +1,4 @@
-@reference "./tailwind.css";
+@import './tailwind.css';
 
 /**
  * CSS Styles for code highlighting.
