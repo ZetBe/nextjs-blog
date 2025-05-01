@@ -6,10 +6,10 @@ const siteMetadata = {
   description: '개발에 관해 이야기하는 블로그',
   language: 'en-us',
   theme: 'system', // system, dark or light
-  siteUrl: 'http://localhost:3000/',
+  siteUrl: 'https://kevin-dev-blog.vercel.app/',
   siteRepo: 'https://github.com/ZetBe/nextjs-blog',
-  siteLogo: `${process.env.BASE_PATH || ''}/static/images/logo.png`,
-  socialBanner: `${process.env.BASE_PATH || ''}/static/images/twitter-card.png`,
+  siteLogo: `https://github.com/user-attachments/assets/701586f8-ddb1-45dc-b9a1-2feebbd44d9a`,
+  socialBanner: `https://github.com/user-attachments/assets/701586f8-ddb1-45dc-b9a1-2feebbd44d9a`,
   email: 'seoheewon123@naver.com',
   github: 'https://github.com/ZetBe',
   linkedin: 'https://www.linkedin.com/in/%ED%9D%AC%EC%9B%90-%EC%84%9C-73b092280/',
