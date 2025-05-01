@@ -1,5 +1,4 @@
 /** @type {import("pliny/config").PlinyConfig } */
-import img from '../public/static/images/logo.png'
 const siteMetadata = {
   title: 'Kevin Dev Blog',
   author: 'Kevin(서희원)',
@@ -9,8 +8,8 @@ const siteMetadata = {
   theme: 'system', // system, dark or light
   siteUrl: 'https://kevin-dev-blog.vercel.app/',
   siteRepo: 'https://github.com/ZetBe/nextjs-blog',
-  siteLogo: img,
-  socialBanner: img,
+  siteLogo: `${process.env.BASE_PATH || ''}/static/images/logo.png`,
+  socialBanner: `${process.env.BASE_PATH || ''}/static/images/logo.png`,
   email: 'seoheewon123@naver.com',
   github: 'https://github.com/ZetBe',
   linkedin: 'https://www.linkedin.com/in/%ED%9D%AC%EC%9B%90-%EC%84%9C-73b092280/',
