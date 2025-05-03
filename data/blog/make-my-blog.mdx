@@ -1,0 +1,320 @@
+---
+title: '나만의 블로그를 만들어보자'
+date: '2025-05-03'
+tags: ['블로그', '프론트엔드']
+draft: false
+summary: |
+  '플랫폼에 종속되지 않고 나만의 블로그를 만들어가는 과정을 담았습니다. next.js의 템플릿을 활용해 리팩토링하며 사이트를 변경하고 있습니다.'
+---
+
+velog 블로그에서 블로그 포스팅 활동을 한지 약 1년 반정도 지났습니다.  
+그 이후로 많은 블로그 글들을 남기긴 했는데.. 항상 마음속에 품고 있던 목표가 있었습니다.
+
+"이번엔 꼭 나만의 블로그를 만들어보자"
+
+솔직히 프론트엔드 공부를 하면서 적용해보고 싶은 내용이 있다면 바로 블로그에 적용해보고 싶은 것이 개발자의 마음이 아닐까? 싶거든요
+
+그리고 일종의 포트폴리오로도 활용 가능하기도 하구요.
+
+그래서 이번엔 한번 블로그를 만들어 봤습니다.
+물론 템플릿을 활용해 리팩토링을 겸한..
+
+## 어떤 템플릿을 활용할까?
+
+일단 템플릿 선정을 하기로 했습니다.
+템플릿 선정만 잘 해도 일단 반은 먹고 들어가지 않을까 싶거든요.
+
+선정 기준은 일단 다음과 같이 정해봤습니다.
+
+- 필자가 사용해본 기술 스택인가?
+- 참고 할만한 예시들이 많은가?
+- 초기 템플릿의 ui는 예쁘게 보이는 가?
+- 최근(최소 3개월 전)까지 깃허브 오픈소스에 수정된 이력이 있는가?
+
+그래서 필자는 일단 [이 곳의 ](https://github.com/timlrx/tailwind-nextjs-starter-blog)템플릿을 활용하기로 했습니다.
+
+tailwind 공부 겸 블로그 사이트 ui도 괜찮아 보였거든요.
+
+또한 외국의 많은 개발자 분들이 이 블로그 템플릿을 토대로 블로그를 만들었다고 하니 만약 개발 중에 에러를 마주쳐도 다른 분들의 오픈소스를 찾아보자는 생각으로 골라봤습니다.
+
+## 템플릿은 어떻게 가져올까?
+
+물론 깃허브에 템플릿을 가져온다고 하면 아래 사진의 흰 동그라미 친 버튼을 누르면 친절하게 안내해줍니다.
+![깃허브 템플릿 버튼](/static/images/blog/github-template.png)
+
+기존의 깃허브 저장소에 있던 내용들을 로컬에 클론으로 가져와서 코드 에디터를 작동시키면 됩니다.
+(앞으로 설명할 부분들이 많아서.. 그리고 기초적인 내용들이라 생각해서 [링크](https://choiiis.github.io/git/how-to-clone-project/)를 참고해서 `git clone`해주시면 됩니다.)
+
+## 템플릿 흔적을 지우고 나만의 데이터로 채우자
+
+템플릿을 가져오다보면 당장 /about페이지만 봐도 아래 사진처럼 되어 있는 경우가 많습니다.
+![템플릿 about페이지](/static/images/blog/template-about.png)
+
+보통 이런 경우, 필자가 사용하는 소스코드들을 훑어보다 보면 `siteMetadata.js`와 `data/authors/default.mdx`파일과 같이 여러 곳에 흩어져 있는 경우도 있는데요.
+
+이럴 때, 개인적으로 추천하는 방식은 만약 data폴더가 존재한다면 일단 data폴더의 파일 이름들을 보고, 수정하고 싶은 이름의 파일이 있다면, 해당 파일의 코드를 수정하면 된다 생각합니다.
+
+만약 다른 app폴더나 components폴더의 파일들을 살펴보게 된다면 자꾸 엉뚱한 길로 빠지게 되더라구요.
+일단 한가지 일에 집중하기 위해 나만의 데이터를 채우는 것을일순위로 하고 일단 data를 수정해봅시다.
+
+## 기존에 작성했던 글들을 가져오자(velog)
+
+예전 블로그에서 작성했던 글들이 있습니다.
+이 글들을 일일히 하나씩 가져오는 것은 여간 귀찮은 일이 아니죠..
+
+하지만, 새로 블로그를 만들었는데, 다시 처음부터 올린 블로그의 수가 1로 시작된다면 매우 기분이 언짢아 질 것이라 생각이 들었습니다.
+
+그래서 사이트를 크롤링해서 하나하나 가져오는 방식을 선택했습니다.
+ai에게 이 일을 맡기니 좀 편해졌더라구요.
+
+코드는 다음과 같습니다.
+
+```javascript
+const fs = require('fs').promises
+const path = require('path')
+const axios = require('axios')
+
+// 설정
+const VELOG_USERNAME = '여기에_본인의_velog_사용자명' // 본인 velog 사용자명으로 변경하세요
+const OUTPUT_DIR = path.join(__dirname, 'content/posts')
+
+/**
+ * velog GraphQL API를 사용하여 사용자의 모든 글 목록을 가져옵니다
+ */
+async function fetchAllPostsList() {
+  const query = `
+    query Posts($username: String) {
+      posts(username: $username) {
+        id
+        title
+        url_slug
+        released_at
+        updated_at
+        tags
+        short_description
+      }
+    }
+  `
+
+  try {
+    const response = await axios({
+      url: 'https://v2.velog.io/graphql',
+      method: 'post',
+      data: {
+        query,
+        variables: { username: VELOG_USERNAME },
+      },
+    })
+
+    if (response.data.errors) {
+      console.error('GraphQL 오류:', response.data.errors)
+      return []
+    }
+
+    return response.data.data.posts
+  } catch (error) {
+    console.error('글 목록 가져오기 실패:', error.message)
+    return []
+  }
+}
+
+/**
+ * 특정 글의 전체 내용을 가져옵니다
+ */
+async function fetchPostContent(postId) {
+  const query = `
+    query Post($id: ID!) {
+      post(id: $id) {
+        id
+        title
+        released_at
+        updated_at
+        tags
+        body
+        short_description
+        is_markdown
+        is_private
+      }
+    }
+  `
+
+  try {
+    const response = await axios({
+      url: 'https://v2.velog.io/graphql',
+      method: 'post',
+      data: {
+        query,
+        variables: { id: postId },
+      },
+    })
+
+    if (response.data.errors) {
+      console.error(`글 내용 가져오기 오류 (ID: ${postId}):`, response.data.errors)
+      return null
+    }
+
+    return response.data.data.post
+  } catch (error) {
+    console.error(`글 내용 가져오기 실패 (ID: ${postId}):`, error.message)
+    return null
+  }
+}
+
+/**
+ * Markdown 파일로 저장 (요청한 형식으로)
+ */
+async function saveAsMarkdown(post) {
+  // 요청된 형식으로 frontmatter 작성
+  const frontMatter = `---
+    title: ${post.title.replace(/'/g, "\\'")}
+    date: '${new Date(post.released_at).toISOString().split('T')[0]}'
+    tags: [${post.tags.map((tag) => `'${tag}'`).join(', ')}]
+    draft: false
+    summary: ${post.short_description?.replace(/'/g, "\\'") || ''}
+    ---`
+
+  const content = `${frontMatter}\n\n${post.body}`
+  // frontmatter와 본문 사이에 빈 줄 추가
+
+  // 파일명은 velog의 slug 사용
+  const slug = post.url_slug || sanitizeFilename(post.title)
+  const fileName = `${slug}.mdx`
+  const filePath = path.join(OUTPUT_DIR, fileName)
+
+  await fs.writeFile(filePath, content, 'utf-8')
+  return fileName
+}
+
+/**
+ * 파일명으로 사용할 수 없는 문자 제거
+ */
+function sanitizeFilename(name) {
+  return name
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '') // 특수문자 제거
+    .replace(/\s+/g, '-') // 공백을 대시로 변환
+    .replace(/-+/g, '-') // 연속된 대시 하나로 변환
+}
+
+/**
+ * 메인 함수
+ */
+async function main() {
+  console.log(`👉 ${VELOG_USERNAME}님의 velog 글을 가져오는 중...`)
+
+  // 출력 디렉토리 생성
+  await fs.mkdir(OUTPUT_DIR, { recursive: true })
+
+  // 글 목록 가져오기
+  const postsList = await fetchAllPostsList()
+  if (postsList.length === 0) {
+    console.log('❌ 가져올 글이 없거나 오류가 발생했습니다.')
+    return
+  }
+
+  console.log(`📋 총 ${postsList.length}개의 글을 찾았습니다.`)
+
+  // 각 글의 내용 가져와서 저장
+  let successCount = 0
+  let failCount = 0
+
+  for (let i = 0; i < postsList.length; i++) {
+    const post = postsList[i]
+    console.log(`🔄 (${i + 1}/${postsList.length}) "${post.title}" 처리 중...`)
+
+    // 글 상세 내용 가져오기
+    const postDetail = await fetchPostContent(post.id)
+
+    if (postDetail) {
+      try {
+        const fileName = await saveAsMarkdown({ ...post, ...postDetail })
+        console.log(`✅ 저장 완료: ${fileName}`)
+        successCount++
+
+        // API 호출 간격 조절 (서버 부하 방지)
+        await new Promise((resolve) => setTimeout(resolve, 500))
+      } catch (error) {
+        console.error(`❌ 저장 실패 (${post.title}):`, error.message)
+        failCount++
+      }
+    } else {
+      failCount++
+    }
+  }
+
+  // 메타데이터 저장
+  const metadata = {
+    username: VELOG_USERNAME,
+    crawled_at: new Date().toISOString(),
+    total_posts: postsList.length,
+    success_count: successCount,
+    fail_count: failCount,
+  }
+
+  await fs.writeFile(
+    path.join(OUTPUT_DIR, '_metadata.json'),
+    JSON.stringify(metadata, null, 2),
+    'utf-8'
+  )
+
+  console.log('\n===== 크롤링 완료 =====')
+  console.log(`📊 총 ${postsList.length}개 중 ${successCount}개 성공, ${failCount}개 실패`)
+  console.log(`📁 저장 위치: ${OUTPUT_DIR}`)
+}
+
+// 실행
+main().catch((error) => {
+  console.error('❌ 오류 발생:', error)
+})
+```
+
+간단하게 이야기하자면 크롤링 자체는 로그인이 필요없기 때문에 매우 간단하게 가져 올 수 있고, 일회성으로 한번 가져오고 마는 것이기 때문에 지금은 삭제한 파일입니다.
+
+파일을 실행하고 싶다면 `node [크롤링 코드가 있는 파일이름]`이런 식으로 터미널에 작성하면 파일을 크롤링으로 가져올 수 있습니다.
+
+### 가져오긴 했는데..
+
+여기서 문제가 발생합니다.
+
+크롤링을 해서 파일을 가져왔는데, 터미널에서 오류가 뜨더군요.
+
+이거 문제를 살펴보니 mdx파일에서 태그의 닫는 텍스트가 없어서
+
+그러니까 `<br/>`이런 식으로 작성해야하는데,
+기존의 velog에서 `<br>`이런 식으로 막 개행했던 것이 문제가 되었던 것입니다.
+
+만약 다른 플랫폼에서 닫는 태그 없어도 잘 돌아간다고 그냥 남용하다가는 이런 일이 발생할 수 있으니 꼭 태그는 닫읍시다.~~에러 안뜬다고 태그도 안닫은 사람..~~
+
+## 추가로 적용할 것들
+
+일단 velog 글까지 가져왔으니 다 된 것 아니냐 하겠지만,
+
+추가로 고려할 부분들이 어느정도 존재합니다.
+그래서 한번 적용했던 부분들을 살펴보겠습니다.
+
+### 댓글
+
+[giscus](https://giscus.app/ko)라는 댓글 시스템입니다.
+
+사용자 입장에서 github 로그인 하면 바로 댓글을 적용할 수 있어서 좋은 기능이죠.
+템플릿에서는 이렇게 객체로 작성만 하면 바로 사용 가능합니다.
+
+![메타데이터 코멘트](/static/images/blog/sitematadata-comment.png)
+
+### open graph
+
+오픈 그래프를 통해 해당 블로그를 sns에 공유할 때, 정상적인 사이트라고 소개할 수 있게끔 해줍니다.
+그래서 만약 카톡에 제 사이트 링크를 공유한다면 다음과 같이 나타납니다.
+![kakao-metadata](/static/images/blog/kakao-metadata.png)
+
+## 마무리
+
+이렇게 해서 블로그 자체 구축에 대해 알아봤습니다.
+앞으로 할일들이 많긴한데 일단 다음과 같이 있네요
+
+- 블로그 포스트 썸네일 데이터 추가
+- seo 개선
+- 블로그 색 바꾸기
+- 사이트 전체 흐름 보기
+
+> 혹시 사이트에 불편한 점이 있다면 seoheewon123@naver.com으로 메일 한번 보내시면 바로 고치겠습니다.
