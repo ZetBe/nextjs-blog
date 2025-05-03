@@ -6,7 +6,7 @@ const siteMetadata = {
   description: '개발에 관해 이야기하는 블로그',
   language: 'en-us',
   theme: 'system', // system, dark or light
-  siteUrl: 'https://kevin-dev-blog.vercel.app/',
+  siteUrl: 'https://kevin-dev-blog.vercel.app',
   siteRepo: 'https://github.com/ZetBe/nextjs-blog',
   siteLogo: `${process.env.BASE_PATH || ''}/static/images/logo.png`,
   socialBanner: `${process.env.BASE_PATH || ''}/static/images/logo.png`,
