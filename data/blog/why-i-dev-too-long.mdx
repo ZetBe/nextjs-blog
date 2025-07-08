@@ -11,7 +11,10 @@ images: ['/static/images/blog/25-06-13/thumbnail.png']
 
 ![thumbnail](/static/images/blog/25-06-13/thumbnail.png)
 
-최근 블로그 글감으로 다시 한번 큐레이션 글을 보자는 생각이 들어서 글또 블로그에 들어갔다.
+최근 블로그 글감으로 다시 한번 큐레이션 글을 보자는 생각이 들어서 [글또 블로그](https://geultto.github.io/)에 들어갔다.
+
+> 현재 글또 블로그의 검색 기능은 매우 잘 됩니다.
+
 ![blog-main](/static/images/blog/25-06-13/blog-main.png)
 
 여기서 필자는 상단 네비게이션 부분의 `큐레이션`으로 들어가면 되지만.. 오른쪽의 검색 부분으로 필자의 수고를 덜하지 않을까 하는 생각에 검색을 해보기로 했다.
@@ -42,6 +45,10 @@ TypeError: t.map is not a function
 그랬더니 흔쾌히 블로그 운영을 담당해주시는 분 께서 PR을 허락해주셨고,
 어떻게 기여 해야하는지, 해당 깃허브 저장소의 마크다운 문서에 따라서 진행해보았다.
 
+> 지금은 merge되었습니다.
+>
+> 보러 가기: https://github.com/geultto/geultto.github.io/pull/88
+
 ## 검색기능 그냥 공식문서 참고해서 넣으면 되는 것 아니냐?
 
 > 괄호()안에 있는 숫자는 개발 시작할 때 부터 대략적인 시간을 나타낸 것입니다.
@@ -52,10 +59,113 @@ TypeError: t.map is not a function
 
 그러나 여기서 문제가 발생하는데..
 
-필자가 기여하려는 블로그 사이트에서는 `fumadocs`라는 프레임워크를 사용 중며, 이 프레임워크의 버전은 `14.7.0`이였다.
+필자가 기여하려는 블로그 사이트에서는 [`fumadocs`](https://fumadocs.dev/)라는 프레임워크를 사용 중며, 이 프레임워크의 버전은 `14.7.0`이였다.
 그리고 공식문서 사이트에서는 가장 최근 버전인 `15.5.1`을 기준으로 설명한다는 것이다.
 
-이 14버전과 15버전의 차이는 지금와서 보면 굉장히 큰 차이인데,
+이 버전 차이가 얼마나 차이가 나는지 당장 코드로 비교해보면 다음과 같다.
+
+서버(app/api/search/route.ts)는 기존 코드와 비슷하지만, 클라이언트 단에서 매우 다른 코드를 보여준다.
+
+```typescript
+// 15.5.1 (공식문서 i18n제외)
+'use client';
+import { useDocsSearch } from 'fumadocs-core/search/client';
+import {
+  SearchDialog,
+  SearchDialogClose,
+  SearchDialogContent,
+  SearchDialogHeader,
+  SearchDialogIcon,
+  SearchDialogInput,
+  SearchDialogList,
+  SearchDialogOverlay,
+  type SharedProps,
+} from 'fumadocs-ui/components/dialog/search';
+
+export default function DefaultSearchDialog(props: SharedProps) {
+  const { search, setSearch, query } = useDocsSearch({
+    type: 'fetch',
+  });
+
+  return (
+    <SearchDialog
+      search={search}
+      onSearchChange={setSearch}
+      isLoading={query.isLoading}
+      {...props}
+    >
+      <SearchDialogOverlay />
+      <SearchDialogContent>
+        <SearchDialogHeader>
+          <SearchDialogIcon />
+          <SearchDialogInput />
+          <SearchDialogClose />
+        </SearchDialogHeader>
+        <SearchDialogList items={query.data !== 'empty' ? query.data : null} />
+      </SearchDialogContent>
+    </SearchDialog>
+  );
+}
+```
+
+```typescript
+//14.7.0(실제 merge된 파일 중 하나)
+
+'use client';
+
+import React from 'react';
+import { SearchDialog, type SharedProps } from 'fumadocs-ui/components/dialog/search';
+import { useDocsSearch } from 'fumadocs-core/search/client';
+
+
+export default function CustomSearchDialog(props: SharedProps): React.ReactElement {
+  // 검색 설정 - 서버에서 모든 검색 로직 처리
+  const { query, search, setSearch } = useDocsSearch({
+    type: 'static',
+  });
+
+  function handleSearchChange(rawQuery: string) {
+    // 앞뒤 공백만 제거하고 서버에 그대로 전달
+    setSearch(rawQuery);
+  }
+
+  // 서버 결과를 그대로 사용 (클라이언트 사이드 필터링 제거)
+  const processedResults = React.useMemo(() => {
+
+    // 로딩 중이거나 검색어가 없으면 빈 배열
+    if (query.isLoading || !search.trim()) {
+      return [];
+    }
+
+    // 에러가 있으면 빈 배열
+    if (query.error) {
+      return [];
+    }
+
+    // 결과가 'empty'이거나 배열이 아니면 빈 배열
+    if (query.data === 'empty' || !Array.isArray(query.data)) {
+      return [];
+    }
+
+    // 서버에서 받은 결과를 그대로 반환
+
+    return query.data;
+  }, [query.data, query.isLoading, query.error, search]);
+
+  return (
+    <SearchDialog
+      search={search}
+      onSearchChange={handleSearchChange}
+      results={processedResults}
+      {...props}
+    />
+  );
+}
+```
+
+당장 클라이언트 파트에서 보면 `fumadocs`의 버전이 15 버전이 넘어가면서 태그로 세세하게 커스텀 가능하게 변경되는 것을 알 수 있다.
+
+또한 14버전과 15버전의 차이는 지금와서 보면 굉장히 큰 차이인데,
 필자는 이 문제를 별거 아닌 문제라 생각하고 왜 공식문서 따라하는데 이런 에러가 발생하는지 머리를 쥐어짜며 4시간을 허비했다.
 
 그렇게 14와 15버전의 차이가 있다는 것을 알게 되고 여기서 더 큰 문제로 빠지게 되는데..
@@ -73,7 +183,9 @@ TypeError: t.map is not a function
 > 이렇게 된다면, 거의 모든 의존성들을 업그레이드하고, 그로 인해, 검색 부분만 적용한다는 것을 아예 대부분의 파일을 건드리게 될 것이고,
 > 이를 속담으로 표현하자면 `빈대 잡느라 초가삼간 다 태운다`와 같은 상황이 발생할 것이다.
 
-그렇기 때문에, `fumadocs` 공식 깃허브 저장소의 공식 문서 커밋 이력을 조회하여 최대한 `14.7.0`버전과 비슷한 버전의 공식 문서를 살펴보았다.
+![같이 무너짐](/static/images/blog/25-06-13/burn.png)
+
+그렇기 때문에, `fumadocs` 공식 깃허브 저장소의 공식 문서 커밋 이력을 조회하여 최대한 [`14.7.0`버전과 비슷한 버전의 공식 문서](https://github.com/fuma-nama/fumadocs/blob/15c4b8837e34276e6697513441c57b44f482c06c/apps/docs/content/docs/headless/search/orama.mdx)를 살펴보았다.
 
 그 결과, 검색'은' 잘 되는 것으로 확인했다.
 
@@ -134,8 +246,31 @@ NFD와 NFC의 차이 표
 그래서 [normalize(정규화)](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/String/normalize) 중 NFC가 한글에서는 필요하다.
 
 그렇게 적용한 결과, 다음과 같이 정상적으로 검색 기능이 동작하는 것을 확인하게 되었다.
-![search-han](/static/images/blog/25-06-13/search-han.png)
-![search-eng](/static/images/blog/25-06-13/search-eng.png)
+![result](/static/images/blog/25-06-13/result.gif)
+
+## PR 올리기
+
+![pr](/static/images/blog/25-06-13/pr.png)
+
+그렇게 필자는 글또 블로그 깃허브에 [PR](https://github.com/geultto/geultto.github.io/pull/88)을 올리며
+한가지 수정하게 된 사실에 대해 질문을 남겼다.
+
+> 입력창에서 문자하나 이상입력할 때 부터 서버에 동적으로 요청보내는 부분들이 있어서, next.config.mjs에서 output: "export"를 제거하였는데, 문제없을까요?
+
+이에 대해 블로그 담당 하시던 분 께서 다음과 같은 답변을 남겨 또 문제 해결 과정을 거쳐야하나 걱정이 들었지만,
+
+![pr-answer](/static/images/blog/25-06-13/pr-answer.png)
+
+다행히도, 정적 검색을 `fumadocs`에서 지원해주었기 때문에, 다음과 같이 3개의 파일에 간단히 코드를 수정하여
+
+빌드 시 `SSG` 형식의 렌더링이 적용되는 것을 확인하였다.
+
+![static-commit](/static/images/blog/25-06-13/static-commit.png)
+![ssg](/static/images/blog/25-06-13/ssg.png)
+
+그렇게 필자의 PR은 잘 병합되어 해당 저장소에 기여하는 모습을 볼 수 있다.
+
+![ssg](/static/images/blog/25-06-13/github.png)
 
 ## 마무리
 
