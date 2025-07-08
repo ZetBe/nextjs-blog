@@ -49,7 +49,7 @@ const ZoomableImage = ({ src, alt, zoomable = true, ...rest }: ZoomableImageProp
           aria-modal="true"
           aria-label="Zoomed image"
         >
-          <div className="relative max-h-full max-w-full">
+          <div className="relative h-full max-h-full w-full max-w-7xl">
             <button
               onClick={handleCloseZoom}
               onKeyDown={handleKeyDown}
@@ -63,13 +63,14 @@ const ZoomableImage = ({ src, alt, zoomable = true, ...rest }: ZoomableImageProp
               onKeyDown={handleKeyDown}
               style={{ border: 'none', background: 'none', padding: 0, cursor: 'zoom-out' }}
               aria-label="Close zoomed image"
+              className="relative h-full w-full"
             >
               <NextImage
                 src={`${basePath || ''}${src}`}
                 alt={alt}
-                width={rest.width}
-                height={rest.height}
-                className="max-h-screen max-w-full object-contain"
+                fill
+                sizes="100vw"
+                className="object-contain"
               />
             </button>
           </div>
