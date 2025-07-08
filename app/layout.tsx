@@ -51,11 +51,6 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
-  twitter: {
-    title: siteMetadata.title,
-    card: 'summary_large_image',
-    images: [siteMetadata.socialBanner],
-  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
